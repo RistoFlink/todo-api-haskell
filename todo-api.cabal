@@ -64,7 +64,7 @@ executable todo-api
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.18.3.0, servant-server, aeson, warp, text
+    build-depends:    base ^>=4.18.3.0, servant-server, aeson, warp, text, persistent, persistent-sqlite, persistent-template
 
     -- Directories containing source files.
     hs-source-dirs:   app
