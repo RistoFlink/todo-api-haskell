@@ -8,26 +8,22 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Main where
-
---main :: IO ()
--- main = putStrLn "Hello, Haskell!"
 
 import GHC.Generics (Generic)
 import Data.Text (Text)
 import Servant
 import Network.Wai.Handler.Warp (run)
 
--- Corrected and Finalized Imports:
-import Data.Aeson (FromJSON, ToJSON(..), object, (.=)) -- ADDED toJSON method, object, and (.=)
+import Data.Aeson (FromJSON, ToJSON(..), object, (.=))
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Database.Persist (Entity(..), Key, selectList, insertEntity, getEntity, replace, delete, SelectOpt(Asc)) -- CHANGED Entity to Entity(..)
-import Database.Persist.Sqlite (fromSqlKey, runSqlite, runMigration, SqlPersistT) -- ADDED fromSqlKey
+import Database.Persist (Entity(..), Key, selectList, insertEntity, getEntity, replace, delete, SelectOpt(Asc))
+import Database.Persist.Sqlite (fromSqlKey, runSqlite, runMigration, SqlPersistT)
 import Database.Persist.TH (share, mkPersist, sqlSettings, mkMigrate, persistLowerCase)
 
 
@@ -62,19 +58,20 @@ instance ToJSON TodoPayload -- For consistency
 
 -- Update the TodoAPI type to be a full CRUD API
 type TodoAPI =
-       -- GET /todos
-       "todos" :> Get '[JSON] [Entity Todo]
+      -- GET /todos
+      "health" :> Get '[JSON] String
+  :<|> "todos" :> Get '[JSON] [Entity Todo]
 
-       -- POST /todos
+      -- POST /todos
   :<|> "todos" :> ReqBody '[JSON] TodoPayload :> Post '[JSON] (Entity Todo)
 
-       -- GET /todos/{id}
+      -- GET /todos/{id}
   :<|> "todos" :> Capture "id" (Key Todo) :> Get '[JSON] (Entity Todo)
 
-       -- PUT /todos/{id}
+      -- PUT /todos/{id}
   :<|> "todos" :> Capture "id" (Key Todo) :> ReqBody '[JSON] TodoPayload :> Put '[JSON] (Entity Todo)
 
-       -- DELETE /todos/{id}
+      -- DELETE /todos/{id}
   :<|> "todos" :> Capture "id" (Key Todo) :> Delete '[JSON] ()
 
 -- Create
@@ -106,9 +103,14 @@ putTodo todoId payload = runDb $ do
 deleteTodo :: Key Todo -> Handler ()
 deleteTodo todoId = runDb $ delete todoId
 
+-- Health check
+healthCheck :: Handler String
+healthCheck = return "OK"
+
 -- Combine all handlers into the server
 server :: Server TodoAPI
-server = getTodos
+server = healthCheck
+    :<|> getTodos
     :<|> postTodo
     :<|> getTodoById
     :<|> putTodo
