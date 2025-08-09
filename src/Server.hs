@@ -13,6 +13,7 @@ import Model
 import Monad (AppConfig, AppM (..), runDb)
 import Network.Wai.Handler.Warp (run)
 import Servant
+import Validation (validateTodoPayload)
 
 -- This function converts AppM actions into the Handlers that Servant expects.
 appMToHandler :: AppConfig -> AppM a -> Handler a
@@ -51,8 +52,13 @@ getTodos maybeCompleted =
 
 postTodo :: TodoPayload -> AppM (Entity Todo)
 postTodo payload = do
+  -- Validate the payload first
+  (validTitle, validCompleted) <- case validateTodoPayload payload of
+    Left err -> throwError err
+    Right result -> return result
+
   now <- liftIO getCurrentTime
-  let newTodo = Todo (title payload) (completed payload) now now
+  let newTodo = Todo validTitle validCompleted now now
   runDb $ insertEntity newTodo
 
 getTodoById :: Key Todo -> AppM (Entity Todo)
@@ -64,13 +70,18 @@ getTodoById todoId = do
 
 putTodo :: Key Todo -> TodoPayload -> AppM (Entity Todo)
 putTodo todoId payload = do
+  -- Validate the payload first
+  (validTitle, validCompleted) <- case validateTodoPayload payload of
+    Left err -> throwError err
+    Right result -> return result
+
   now <- liftIO getCurrentTime
   -- First check if the todo exists
   maybeTodo <- runDb $ getEntity todoId
   case maybeTodo of
     Nothing -> throwError err404
     Just (Entity _ originalTodo) -> do
-      let updatedTodo = Todo (title payload) (completed payload) (todoCreatedAt originalTodo) now
+      let updatedTodo = Todo validTitle validCompleted (todoCreatedAt originalTodo) now
       runDb $ replace todoId updatedTodo
       return $ Entity todoId updatedTodo
 

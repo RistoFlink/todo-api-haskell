@@ -20,7 +20,8 @@ library
     exposed-modules:  Monad,
                         Model,
                         Api,
-                        Server
+                        Server,
+                        Validation,
 
     -- Add other modules created in src/ that are not exposed
     -- other-modules:
@@ -36,7 +37,8 @@ library
                         persistent-template,
                         mtl,
                         monad-logger,
-                        time
+                        time,
+                        bytestring
 
     -- Directory containing the library's source files.
     hs-source-dirs:   src
