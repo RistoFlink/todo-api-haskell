@@ -1,4 +1,4 @@
-cabal-version:      3.12
+cabal-version:      3.8
 name:               todo-api
 version:            0.1.0.0
 license:            NONE
@@ -18,24 +18,25 @@ library
     -- List the modules that your library exposes.
     -- Other parts of your project can import these.
     exposed-modules:  Monad,
-                      Model,
-                      Api,
-                      Server
+                        Model,
+                        Api,
+                        Server
 
     -- Add other modules created in src/ that are not exposed
     -- other-modules:
 
     -- Main list of dependencies for the application logic.
     build-depends:    base ^>=4.18.3.0,
-                      servant-server,
-                      aeson,
-                      warp,
-                      text,
-                      persistent,
-                      persistent-sqlite,
-                      persistent-template,
-                      mtl,
-                      monad-logger
+                        servant-server,
+                        aeson,
+                        warp,
+                        text,
+                        persistent,
+                        persistent-sqlite,
+                        persistent-template,
+                        mtl,
+                        monad-logger,
+                        time
 
     -- Directory containing the library's source files.
     hs-source-dirs:   src
@@ -55,6 +56,7 @@ executable todo-api
                 todo-api,
                 monad-logger,
                 persistent-sqlite,
+                time,
                 warp
  -- Directory containing the executable's source file.
  hs-source-dirs: app
