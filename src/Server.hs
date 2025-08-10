@@ -7,6 +7,7 @@ module Server where
 import Api (TodoAPI)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (runReaderT)
+import qualified Data.Text as T
 import Data.Time (getCurrentTime)
 import Database.Persist (Entity (..), SelectOpt (LimitTo, OffsetBy), count, delete, getEntity, insertEntity, replace, selectList, (==.))
 import qualified Model as M
@@ -43,16 +44,16 @@ runApp config = do
 healthCheck :: AppM String
 healthCheck = return "OK"
 
-getTodos :: Maybe Bool -> Maybe Int -> Maybe Int -> Maybe String -> AppM M.TodoResponse
-getTodos maybeCompleted maybeLimit maybeOffset maybeSortParam = do
+getTodos :: Maybe Bool -> Maybe Int -> Maybe Int -> Maybe String -> Maybe String -> AppM M.TodoResponse
+getTodos maybeCompleted maybeLimit maybeOffset maybeSortParam maybeSearchParam = do
   let sortBy = M.parseSortParam maybeSortParam
   let filters = case maybeCompleted of
         Nothing -> []
         Just isCompleted -> [M.TodoCompleted ==. isCompleted]
 
   -- Set defaults: limit 10, offset 0
-  let limit' = maybe 10 (max 1 . min 100) maybeLimit -- Between 1-100, default 10
-  let offset' = maybe 0 (max 0) maybeOffset -- At least 0, default 0
+  let limit' = maybe 10 (max 1 . min 100) maybeLimit
+  let offset' = maybe 0 (max 0) maybeOffset
 
   -- Get total count for pagination metadata
   totalCount' <- runDb $ count filters
@@ -60,8 +61,16 @@ getTodos maybeCompleted maybeLimit maybeOffset maybeSortParam = do
   -- Get paginated results with sorting
   let sortOps = M.toSelectOpt sortBy
   todos' <- runDb $ selectList filters (sortOps ++ [LimitTo limit', OffsetBy offset'])
+  let searchFilteredTodos = case maybeSearchParam of
+        Nothing -> todos'
+        Just searchTerm ->
+          filter
+            ( \(Entity _ todo) ->
+                T.isInfixOf (T.toLower $ T.pack searchTerm) (T.toLower $ M.todoTitle todo)
+            )
+            todos'
 
-  return $ M.TodoResponse todos' totalCount' limit' offset'
+  return $ M.TodoResponse searchFilteredTodos totalCount' limit' offset'
 
 postTodo :: M.CreateTodoPayload -> AppM (Entity M.Todo)
 postTodo payload = do
