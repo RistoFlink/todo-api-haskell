@@ -9,7 +9,11 @@ import Servant
 
 type TodoAPI =
   "health" :> Get '[JSON] String
-    :<|> "todos" :> QueryParam "completed" Bool :> Get '[JSON] [Entity Todo]
+    :<|> "todos"
+      :> QueryParam "completed" Bool
+      :> QueryParam "limit" Int
+      :> QueryParam "offset" Int
+      :> Get '[JSON] TodoResponse
     :<|> "todos" :> ReqBody '[JSON] TodoPayload :> Post '[JSON] (Entity Todo)
     :<|> "todos" :> Capture "id" (Key Todo) :> Get '[JSON] (Entity Todo)
     :<|> "todos" :> Capture "id" (Key Todo) :> ReqBody '[JSON] TodoPayload :> Put '[JSON] (Entity Todo)

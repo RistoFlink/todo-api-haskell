@@ -8,7 +8,7 @@ import Api (TodoAPI)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (runReaderT)
 import Data.Time (getCurrentTime)
-import Database.Persist (Entity (..), SelectOpt (Desc), delete, getEntity, insertEntity, replace, selectList, (==.))
+import Database.Persist (Entity (..), SelectOpt (Desc, LimitTo, OffsetBy), count, delete, getEntity, insertEntity, replace, selectList, (==.))
 import Model
 import Monad (AppConfig, AppM (..), runDb)
 import Network.Wai.Handler.Warp (run)
@@ -43,12 +43,23 @@ runApp config = do
 healthCheck :: AppM String
 healthCheck = return "OK"
 
-getTodos :: Maybe Bool -> AppM [Entity Todo]
-getTodos maybeCompleted =
+getTodos :: Maybe Bool -> Maybe Int -> Maybe Int -> AppM TodoResponse
+getTodos maybeCompleted maybeLimit maybeOffset = do
   let filters = case maybeCompleted of
         Nothing -> []
         Just isCompleted -> [TodoCompleted ==. isCompleted]
-   in runDb $ selectList filters [Desc TodoCreatedAt]
+
+  -- Set defaults: limit 10, offset 0
+  let limit' = maybe 10 (max 1 . min 100) maybeLimit -- Between 1-100, default 10
+  let offset' = maybe 0 (max 0) maybeOffset -- At least 0, default 0
+
+  -- Get total count for pagination metadata
+  totalCount' <- runDb $ count filters
+
+  -- Get paginated results
+  todos' <- runDb $ selectList filters [Desc TodoCreatedAt, LimitTo limit', OffsetBy offset']
+
+  return $ TodoResponse todos' totalCount' limit' offset'
 
 postTodo :: TodoPayload -> AppM (Entity Todo)
 postTodo payload = do

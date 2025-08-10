@@ -53,3 +53,14 @@ data TodoPayload = TodoPayload
     completed :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON)
+
+-- Response type with pagination metadata
+data TodoResponse
+  = TodoResponse
+  { todos :: [Entity Todo],
+    totalCount :: Int,
+    limit :: Int,
+    offset :: Int
+  }
+  deriving
+    (Show, Generic, ToJSON)
