@@ -9,7 +9,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (runReaderT)
 import Data.Time (getCurrentTime)
 import Database.Persist (Entity (..), SelectOpt (Desc, LimitTo, OffsetBy), count, delete, getEntity, insertEntity, replace, selectList, (==.))
-import Model
+import qualified Model as M
 import Monad (AppConfig, AppM (..), runDb)
 import Network.Wai.Handler.Warp (run)
 import Servant
@@ -43,11 +43,11 @@ runApp config = do
 healthCheck :: AppM String
 healthCheck = return "OK"
 
-getTodos :: Maybe Bool -> Maybe Int -> Maybe Int -> AppM TodoResponse
+getTodos :: Maybe Bool -> Maybe Int -> Maybe Int -> AppM M.TodoResponse
 getTodos maybeCompleted maybeLimit maybeOffset = do
   let filters = case maybeCompleted of
         Nothing -> []
-        Just isCompleted -> [TodoCompleted ==. isCompleted]
+        Just isCompleted -> [M.TodoCompleted ==. isCompleted]
 
   -- Set defaults: limit 10, offset 0
   let limit' = maybe 10 (max 1 . min 100) maybeLimit -- Between 1-100, default 10
@@ -57,11 +57,11 @@ getTodos maybeCompleted maybeLimit maybeOffset = do
   totalCount' <- runDb $ count filters
 
   -- Get paginated results
-  todos' <- runDb $ selectList filters [Desc TodoCreatedAt, LimitTo limit', OffsetBy offset']
+  todos' <- runDb $ selectList filters [Desc M.TodoCreatedAt, LimitTo limit', OffsetBy offset']
 
-  return $ TodoResponse todos' totalCount' limit' offset'
+  return $ M.TodoResponse todos' totalCount' limit' offset'
 
-postTodo :: TodoPayload -> AppM (Entity Todo)
+postTodo :: M.TodoPayload -> AppM (Entity M.Todo)
 postTodo payload = do
   -- Validate the payload first
   (validTitle, validCompleted) <- case validateTodoPayload payload of
@@ -69,17 +69,17 @@ postTodo payload = do
     Right result -> return result
 
   now <- liftIO getCurrentTime
-  let newTodo = Todo validTitle validCompleted now now
+  let newTodo = M.Todo validTitle validCompleted now now
   runDb $ insertEntity newTodo
 
-getTodoById :: Key Todo -> AppM (Entity Todo)
+getTodoById :: M.Key M.Todo -> AppM (Entity M.Todo)
 getTodoById todoId = do
   maybeTodo <- runDb $ getEntity todoId
   case maybeTodo of
     Just todo -> return todo
     Nothing -> throwError err404
 
-putTodo :: Key Todo -> TodoPayload -> AppM (Entity Todo)
+putTodo :: M.Key M.Todo -> M.TodoPayload -> AppM (Entity M.Todo)
 putTodo todoId payload = do
   -- Validate the payload first
   (validTitle, validCompleted) <- case validateTodoPayload payload of
@@ -92,11 +92,11 @@ putTodo todoId payload = do
   case maybeTodo of
     Nothing -> throwError err404
     Just (Entity _ originalTodo) -> do
-      let updatedTodo = Todo validTitle validCompleted (todoCreatedAt originalTodo) now
+      let updatedTodo = M.Todo validTitle validCompleted (M.todoCreatedAt originalTodo) now
       runDb $ replace todoId updatedTodo
       return $ Entity todoId updatedTodo
 
-deleteTodo :: Key Todo -> AppM ()
+deleteTodo :: M.Key M.Todo -> AppM ()
 deleteTodo todoId = do
   -- Check if todo exists before deleting
   maybeTodo <- runDb $ getEntity todoId

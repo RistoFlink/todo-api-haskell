@@ -17,7 +17,8 @@
 module Model where
 
 import Data.Aeson (FromJSON, ToJSON (..), object, (.=))
-import Data.Text (Text)
+import Data.Char (toLower)
+import Data.Text (Text, pack)
 import Data.Time (UTCTime)
 import Database.Persist (Entity (Entity))
 import Database.Persist.Sqlite (fromSqlKey)
@@ -64,3 +65,23 @@ data TodoResponse
   }
   deriving
     (Show, Generic, ToJSON)
+
+data SortOrder = Asc | Desc
+  deriving (Show, Read, Eq)
+
+data SortBy = SortBy Text SortOrder
+  deriving (Show, Eq)
+
+-- Helper to parse sort parameters
+parseOrder :: String -> Maybe SortOrder
+parseOrder s = case map toLower s of
+  "asc" -> Just Asc
+  "desc" -> Just Desc
+  _ -> Nothing
+
+parseSortParam :: Maybe String -> Maybe SortBy
+parseSortParam Nothing = Nothing
+parseSortParam (Just s) = case break (== ':') s of
+  (field, ':' : order) -> SortBy (pack field) <$> parseOrder order
+  (field, "") -> Just $ SortBy (pack field) Asc
+  _ -> Nothing
