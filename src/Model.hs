@@ -18,9 +18,9 @@ module Model where
 
 import Data.Aeson (FromJSON, ToJSON (..), object, (.=))
 import Data.Char (toLower)
-import Data.Text (Text, pack)
+import qualified Data.Text as T
 import Data.Time (UTCTime)
-import Database.Persist (Entity (Entity))
+import Database.Persist (Entity (Entity), SelectOpt (..))
 import Database.Persist.Sqlite (fromSqlKey)
 import Database.Persist.TH (mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
 import GHC.Generics (Generic)
@@ -30,7 +30,7 @@ share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
   [persistLowerCase|
 Todo
- title Text
+ title T.Text
  completed Bool
  createdAt UTCTime
  updatedAt UTCTime
@@ -50,13 +50,13 @@ instance ToJSON (Entity Todo) where
 
 -- Payload for receiving data from clients
 data CreateTodoPayload = CreateTodoPayload
-  { createTitle :: Text,
+  { createTitle :: T.Text,
     createCompleted :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
 data UpdateTodoPayload = UpdateTodoPayload
-  { updateTitle :: Maybe Text,
+  { updateTitle :: Maybe T.Text,
     updateCompleted :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON)
@@ -72,22 +72,36 @@ data TodoResponse
   deriving
     (Show, Generic, ToJSON)
 
-data SortOrder = Asc | Desc
+data SortOrder = Ascending | Descending
   deriving (Show, Read, Eq)
 
-data SortBy = SortBy Text SortOrder
+data SortBy = SortBy T.Text SortOrder
   deriving (Show, Eq)
+
+toSelectOpt :: Maybe SortBy -> [SelectOpt Todo]
+toSelectOpt Nothing = [Desc TodoCreatedAt]
+toSelectOpt (Just (SortBy field order)) =
+  case (T.toLower field, order) of
+    ("title", Ascending) -> [Asc TodoTitle]
+    ("title", Descending) -> [Desc TodoTitle]
+    ("completed", Ascending) -> [Asc TodoCompleted]
+    ("completed", Descending) -> [Desc TodoCompleted]
+    ("createdat", Ascending) -> [Asc TodoCreatedAt]
+    ("createdat", Descending) -> [Desc TodoCreatedAt]
+    ("updatedat", Ascending) -> [Asc TodoUpdatedAt]
+    ("updatedat", Descending) -> [Desc TodoUpdatedAt]
+    _ -> [Desc TodoCreatedAt]
 
 -- Helper to parse sort parameters
 parseOrder :: String -> Maybe SortOrder
 parseOrder s = case map toLower s of
-  "asc" -> Just Asc
-  "desc" -> Just Desc
+  "asc" -> Just Ascending
+  "desc" -> Just Descending
   _ -> Nothing
 
 parseSortParam :: Maybe String -> Maybe SortBy
 parseSortParam Nothing = Nothing
 parseSortParam (Just s) = case break (== ':') s of
-  (field, ':' : order) -> SortBy (pack field) <$> parseOrder order
-  (field, "") -> Just $ SortBy (pack field) Asc
+  (field, ':' : order) -> SortBy (T.pack field) <$> parseOrder order
+  (field, "") -> Just $ SortBy (T.pack field) Ascending
   _ -> Nothing
