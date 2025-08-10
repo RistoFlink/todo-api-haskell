@@ -8,7 +8,7 @@ import Api (TodoAPI)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (runReaderT)
 import Data.Time (getCurrentTime)
-import Database.Persist (Entity (..), SelectOpt (Desc, LimitTo, OffsetBy), count, delete, getEntity, insertEntity, replace, selectList, (==.))
+import Database.Persist (Entity (..), SelectOpt (LimitTo, OffsetBy), count, delete, getEntity, insertEntity, replace, selectList, (==.))
 import qualified Model as M
 import Monad (AppConfig, AppM (..), runDb)
 import Network.Wai.Handler.Warp (run)
@@ -43,8 +43,9 @@ runApp config = do
 healthCheck :: AppM String
 healthCheck = return "OK"
 
-getTodos :: Maybe Bool -> Maybe Int -> Maybe Int -> AppM M.TodoResponse
-getTodos maybeCompleted maybeLimit maybeOffset = do
+getTodos :: Maybe Bool -> Maybe Int -> Maybe Int -> Maybe String -> AppM M.TodoResponse
+getTodos maybeCompleted maybeLimit maybeOffset maybeSortParam = do
+  let sortBy = M.parseSortParam maybeSortParam
   let filters = case maybeCompleted of
         Nothing -> []
         Just isCompleted -> [M.TodoCompleted ==. isCompleted]
@@ -56,8 +57,9 @@ getTodos maybeCompleted maybeLimit maybeOffset = do
   -- Get total count for pagination metadata
   totalCount' <- runDb $ count filters
 
-  -- Get paginated results
-  todos' <- runDb $ selectList filters [Desc M.TodoCreatedAt, LimitTo limit', OffsetBy offset']
+  -- Get paginated results with sorting
+  let sortOps = M.toSelectOpt sortBy
+  todos' <- runDb $ selectList filters (sortOps ++ [LimitTo limit', OffsetBy offset'])
 
   return $ M.TodoResponse todos' totalCount' limit' offset'
 
