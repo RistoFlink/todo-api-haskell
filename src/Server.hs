@@ -80,7 +80,7 @@ postTodo payload = do
     Right result -> return result
 
   now <- liftIO getCurrentTime
-  let newTodo = M.Todo validTitle validCompleted now now
+  let newTodo = M.Todo validTitle validCompleted now now (M.createDueDate payload)
   runDb $ insertEntity newTodo
 
 getTodoById :: M.Key M.Todo -> AppM (Entity M.Todo)
@@ -109,7 +109,11 @@ putTodo todoId payload = do
       let updatedCompleted = case maybeCompleted of
             Nothing -> M.todoCompleted originalTodo
             Just c -> c
-      let updatedTodo = M.Todo updatedTitle updatedCompleted (M.todoCreatedAt originalTodo) now
+      let updatedDueDate = case M.updatedDueDate payload of
+            Nothing -> M.todoDueDate originalTodo
+            Just newDueDate -> Just newDueDate
+
+      let updatedTodo = M.Todo updatedTitle updatedCompleted (M.todoCreatedAt originalTodo) now updatedDueDate
       runDb $ replace todoId updatedTodo
       return $ Entity todoId updatedTodo
 

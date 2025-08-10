@@ -16,12 +16,14 @@
 
 module Model where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Reader (ReaderT)
 import Data.Aeson (FromJSON, ToJSON (..), object, (.=))
 import Data.Char (toLower)
 import qualified Data.Text as T
-import Data.Time (UTCTime)
-import Database.Persist (Entity (Entity), SelectOpt (..))
-import Database.Persist.Sqlite (fromSqlKey)
+import Data.Time (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
+import Database.Persist (Entity (Entity), SelectOpt (..), selectList, (<.), (<=.), (==.))
+import Database.Persist.Sqlite (SqlBackend, fromSqlKey)
 import Database.Persist.TH (mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
 import GHC.Generics (Generic)
 
@@ -34,6 +36,7 @@ Todo
  completed Bool
  createdAt UTCTime
  updatedAt UTCTime
+ dueDate UTCTime Maybe
  deriving Show Eq Generic
 |]
 
@@ -45,19 +48,42 @@ instance ToJSON (Entity Todo) where
         "title" .= todoTitle todo,
         "completed" .= todoCompleted todo,
         "createdAt" .= todoCreatedAt todo,
-        "updatedAt" .= todoUpdatedAt todo
+        "updatedAt" .= todoUpdatedAt todo,
+        "dueDate" .= todoDueDate todo
       ]
 
 -- Payload for receiving data from clients
 data CreateTodoPayload = CreateTodoPayload
   { createTitle :: T.Text,
-    createCompleted :: Maybe Bool
+    createCompleted :: Maybe Bool,
+    createDueDate :: Maybe UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
+validateDueDate :: Maybe UTCTime -> IO (Either String (Maybe UTCTime))
+validateDueDate Nothing = return $ Right Nothing
+validateDueDate (Just dueDate) = do
+  now <- getCurrentTime
+  return $
+    if dueDate > now
+      then Right (Just dueDate)
+      else Left "Due date cannot be in the past"
+
+getOverdueTodos :: (MonadIO m) => ReaderT SqlBackend m [Entity Todo]
+getOverdueTodos = do
+  now <- liftIO getCurrentTime
+  selectList [TodoDueDate <. Just now, TodoCompleted ==. False] []
+
+getTodosDueSoon :: (MonadIO m) => NominalDiffTime -> ReaderT SqlBackend m [Entity Todo]
+getTodosDueSoon threshold = do
+  now <- liftIO getCurrentTime
+  let soonTime = addUTCTime threshold now
+  selectList [TodoDueDate <=. Just soonTime, TodoCompleted ==. False] []
+
 data UpdateTodoPayload = UpdateTodoPayload
   { updateTitle :: Maybe T.Text,
-    updateCompleted :: Maybe Bool
+    updateCompleted :: Maybe Bool,
+    updatedDueDate :: Maybe UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
@@ -90,6 +116,8 @@ toSelectOpt (Just (SortBy field order)) =
     ("createdat", Descending) -> [Desc TodoCreatedAt]
     ("updatedat", Ascending) -> [Asc TodoUpdatedAt]
     ("updatedat", Descending) -> [Desc TodoUpdatedAt]
+    ("duedate", Ascending) -> [Asc TodoDueDate]
+    ("duedate", Descending) -> [Desc TodoDueDate]
     _ -> [Desc TodoCreatedAt]
 
 -- Helper to parse sort parameters
