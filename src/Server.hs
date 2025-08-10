@@ -13,7 +13,7 @@ import qualified Model as M
 import Monad (AppConfig, AppM (..), runDb)
 import Network.Wai.Handler.Warp (run)
 import Servant
-import Validation (validateTodoPayload)
+import Validation (validateCreateTodoPayload, validateUpdateTodoPayload)
 
 -- This function converts AppM actions into the Handlers that Servant expects.
 appMToHandler :: AppConfig -> AppM a -> Handler a
@@ -61,10 +61,10 @@ getTodos maybeCompleted maybeLimit maybeOffset = do
 
   return $ M.TodoResponse todos' totalCount' limit' offset'
 
-postTodo :: M.TodoPayload -> AppM (Entity M.Todo)
+postTodo :: M.CreateTodoPayload -> AppM (Entity M.Todo)
 postTodo payload = do
   -- Validate the payload first
-  (validTitle, validCompleted) <- case validateTodoPayload payload of
+  (validTitle, validCompleted) <- case validateCreateTodoPayload payload of
     Left err -> throwError err
     Right result -> return result
 
@@ -79,20 +79,26 @@ getTodoById todoId = do
     Just todo -> return todo
     Nothing -> throwError err404
 
-putTodo :: M.Key M.Todo -> M.TodoPayload -> AppM (Entity M.Todo)
+putTodo :: M.Key M.Todo -> M.UpdateTodoPayload -> AppM (Entity M.Todo)
 putTodo todoId payload = do
   -- Validate the payload first
-  (validTitle, validCompleted) <- case validateTodoPayload payload of
+  (maybeTitle, maybeCompleted) <- case validateUpdateTodoPayload payload of
     Left err -> throwError err
     Right result -> return result
-
   now <- liftIO getCurrentTime
   -- First check if the todo exists
   maybeTodo <- runDb $ getEntity todoId
   case maybeTodo of
     Nothing -> throwError err404
     Just (Entity _ originalTodo) -> do
-      let updatedTodo = M.Todo validTitle validCompleted (M.todoCreatedAt originalTodo) now
+      -- Use original values as defaults if not provided
+      let updatedTitle = case maybeTitle of
+            Nothing -> M.todoTitle originalTodo
+            Just t -> t
+      let updatedCompleted = case maybeCompleted of
+            Nothing -> M.todoCompleted originalTodo
+            Just c -> c
+      let updatedTodo = M.Todo updatedTitle updatedCompleted (M.todoCreatedAt originalTodo) now
       runDb $ replace todoId updatedTodo
       return $ Entity todoId updatedTodo
 

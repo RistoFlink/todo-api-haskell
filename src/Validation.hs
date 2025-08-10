@@ -2,9 +2,10 @@
 
 module Validation where
 
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Model (TodoPayload (..))
+import Model (CreateTodoPayload (..), UpdateTodoPayload (..))
 import Servant (ServerError, err400, errBody)
 
 -- Simple validation functions that throw Servant errors
@@ -20,9 +21,18 @@ validateTitle titleText
 titleValidationError :: ServerError
 titleValidationError = err400 {errBody = "Title must be non-empty and less than 200 characters"}
 
--- Validate and extract fields from payload
-validateTodoPayload :: TodoPayload -> Either ServerError (Text, Bool)
-validateTodoPayload payload =
-  case validateTitle (title payload) of
+-- Validate CREATE payload (title required)
+validateCreateTodoPayload :: CreateTodoPayload -> Either ServerError (Text, Bool)
+validateCreateTodoPayload payload =
+  case validateTitle (createTitle payload) of
     Nothing -> Left titleValidationError
-    Just validTitle -> Right (validTitle, completed payload)
+    Just validTitle -> Right (validTitle, fromMaybe False (createCompleted payload))
+
+-- Validate UPDATE payload (both fields optional)
+validateUpdateTodoPayload :: UpdateTodoPayload -> Either ServerError (Maybe Text, Maybe Bool)
+validateUpdateTodoPayload payload =
+  case updateTitle payload of
+    Nothing -> Right (Nothing, updateCompleted payload) -- No title to validate
+    Just titleText -> case validateTitle titleText of
+      Nothing -> Left titleValidationError
+      Just validTitle -> Right (Just validTitle, updateCompleted payload)

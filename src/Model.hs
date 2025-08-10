@@ -49,9 +49,15 @@ instance ToJSON (Entity Todo) where
       ]
 
 -- Payload for receiving data from clients
-data TodoPayload = TodoPayload
-  { title :: Text,
-    completed :: Bool
+data CreateTodoPayload = CreateTodoPayload
+  { createTitle :: Text,
+    createCompleted :: Maybe Bool
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
+
+data UpdateTodoPayload = UpdateTodoPayload
+  { updateTitle :: Maybe Text,
+    updateCompleted :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 

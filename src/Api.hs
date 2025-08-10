@@ -14,7 +14,7 @@ type TodoAPI =
       :> QueryParam "limit" Int
       :> QueryParam "offset" Int
       :> Get '[JSON] TodoResponse
-    :<|> "todos" :> ReqBody '[JSON] TodoPayload :> Post '[JSON] (Entity Todo)
+    :<|> "todos" :> ReqBody '[JSON] CreateTodoPayload :> Post '[JSON] (Entity Todo)
     :<|> "todos" :> Capture "id" (Key Todo) :> Get '[JSON] (Entity Todo)
-    :<|> "todos" :> Capture "id" (Key Todo) :> ReqBody '[JSON] TodoPayload :> Put '[JSON] (Entity Todo)
+    :<|> "todos" :> Capture "id" (Key Todo) :> ReqBody '[JSON] UpdateTodoPayload :> Put '[JSON] (Entity Todo)
     :<|> "todos" :> Capture "id" (Key Todo) :> Delete '[JSON] ()
