@@ -7,6 +7,7 @@ module Server where
 import Api (TodoAPI)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (runReaderT)
+import Data.String (fromString)
 import qualified Data.Text as T
 import Data.Time (getCurrentTime)
 import Database.Persist (Entity (..), SelectOpt (LimitTo, OffsetBy), count, delete, getEntity, insertEntity, replace, selectList, (==.))
@@ -78,9 +79,17 @@ postTodo payload = do
   (validTitle, validCompleted) <- case validateCreateTodoPayload payload of
     Left err -> throwError err
     Right result -> return result
+  -- Validate due date
+  validDueDate <- case M.createDueDate payload of
+    Nothing -> return Nothing
+    Just _ -> do
+      validation <- liftIO $ M.validateDueDate (M.createDueDate payload)
+      case validation of
+        Left err -> throwError err400 {errBody = "Invalid due date: " <> fromString err}
+        Right validDate -> return validDate
 
   now <- liftIO getCurrentTime
-  let newTodo = M.Todo validTitle validCompleted now now (M.createDueDate payload)
+  let newTodo = M.Todo validTitle validCompleted now now validDueDate
   runDb $ insertEntity newTodo
 
 getTodoById :: M.Key M.Todo -> AppM (Entity M.Todo)
@@ -109,11 +118,17 @@ putTodo todoId payload = do
       let updatedCompleted = case maybeCompleted of
             Nothing -> M.todoCompleted originalTodo
             Just c -> c
-      let updatedDueDate = case M.updatedDueDate payload of
-            Nothing -> M.todoDueDate originalTodo
-            Just newDueDate -> Just newDueDate
 
-      let updatedTodo = M.Todo updatedTitle updatedCompleted (M.todoCreatedAt originalTodo) now updatedDueDate
+      -- Validate and handle due date update
+      validateDueDate <- case M.updateDueDate payload of
+        Nothing -> return (M.todoDueDate originalTodo)
+        Just _ -> do
+          validation <- liftIO $ M.validateDueDate (M.updateDueDate payload)
+          case validation of
+            Left err -> throwError err400 {errBody = "Invalid due date: " <> fromString err}
+            Right validDate -> return validDate
+
+      let updatedTodo = M.Todo updatedTitle updatedCompleted (M.todoCreatedAt originalTodo) now validateDueDate
       runDb $ replace todoId updatedTodo
       return $ Entity todoId updatedTodo
 

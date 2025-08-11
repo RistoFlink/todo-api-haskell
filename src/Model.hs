@@ -83,7 +83,7 @@ getTodosDueSoon threshold = do
 data UpdateTodoPayload = UpdateTodoPayload
   { updateTitle :: Maybe T.Text,
     updateCompleted :: Maybe Bool,
-    updatedDueDate :: Maybe UTCTime
+    updateDueDate :: Maybe UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
