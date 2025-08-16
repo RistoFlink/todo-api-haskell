@@ -18,7 +18,8 @@ module Model where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (ReaderT)
-import Data.Aeson (FromJSON, ToJSON (..), object, (.=))
+import Data.Aeson (FromJSON, ToJSON (..), (.=))
+import Data.Aeson.Types (object)
 import Data.Char (toLower)
 import qualified Data.Text as T
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
@@ -26,7 +27,6 @@ import Database.Persist (Entity (Entity), SelectOpt (..), selectList, (<.), (<=.
 import Database.Persist.Sqlite (SqlBackend, fromSqlKey, (>=.))
 import Database.Persist.TH (derivePersistField, mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
 import GHC.Generics (Generic)
-import Model (EntityField (TodoPriority), Todo (todoPriority))
 
 data Priority = High | Medium | Low
   deriving (Show, Read, Eq, Ord, Generic)
@@ -54,7 +54,7 @@ Todo
 -- JSON instance for sending data to clients
 instance ToJSON (Entity Todo) where
   toJSON (Entity todoId todo) =
-    objec
+    object
       [ "id" .= fromSqlKey todoId,
         "title" .= todoTitle todo,
         "completed" .= todoCompleted todo,
