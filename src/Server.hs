@@ -7,6 +7,7 @@ module Server where
 import Api (TodoAPI)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (runReaderT)
+import Data.Maybe (fromMaybe)
 import Data.String (fromString)
 import qualified Data.Text as T
 import Data.Time (getCurrentTime)
@@ -30,6 +31,8 @@ serverLogic =
     :<|> getTodoById
     :<|> putTodo
     :<|> deleteTodo
+    :<|> getOverdueTodos
+    :<|> getTodosDueSoon
 
 -- Combine all handlers into the server
 server :: AppConfig -> Server TodoAPI
@@ -139,3 +142,12 @@ deleteTodo todoId = do
   case maybeTodo of
     Nothing -> throwError err404
     Just _ -> runDb $ delete todoId
+
+getOverdueTodos :: AppM [Entity M.Todo]
+getOverdueTodos = runDb M.getOverdueTodos
+
+getTodosDueSoon :: Maybe Int -> AppM [Entity M.Todo]
+getTodosDueSoon maybeHours = do
+  let hours = fromMaybe 24 maybeHours
+  let threshold = fromIntegral hours * 60 * 60
+  runDb $ M.getTodosDueSoon threshold

@@ -20,3 +20,5 @@ type TodoAPI =
     :<|> "todos" :> Capture "id" (Key Todo) :> Get '[JSON] (Entity Todo)
     :<|> "todos" :> Capture "id" (Key Todo) :> ReqBody '[JSON] UpdateTodoPayload :> Put '[JSON] (Entity Todo)
     :<|> "todos" :> Capture "id" (Key Todo) :> Delete '[JSON] ()
+    :<|> "todos" :> "overdue" :> Get '[JSON] [Entity Todo]
+    :<|> "todos" :> "due-soon" :> QueryParam "hours" Int :> Get '[JSON] [Entity Todo]
