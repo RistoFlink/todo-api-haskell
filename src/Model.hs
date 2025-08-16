@@ -24,8 +24,17 @@ import qualified Data.Text as T
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
 import Database.Persist (Entity (Entity), SelectOpt (..), selectList, (<.), (<=.), (==.))
 import Database.Persist.Sqlite (SqlBackend, fromSqlKey, (>=.))
-import Database.Persist.TH (mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
+import Database.Persist.TH (derivePersistField, mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
 import GHC.Generics (Generic)
+
+data Priority = High | Medium | Low
+  deriving (Show, Read, Eq, Ord, Generic)
+
+instance ToJSON Priority
+
+instance FromJSON Priority
+
+derivePersistField "Priority"
 
 -- Database model definition
 share
@@ -37,6 +46,7 @@ Todo
  createdAt UTCTime
  updatedAt UTCTime
  dueDate UTCTime Maybe
+ priority Priority
  deriving Show Eq Generic
 |]
 
@@ -56,7 +66,8 @@ instance ToJSON (Entity Todo) where
 data CreateTodoPayload = CreateTodoPayload
   { createTitle :: T.Text,
     createCompleted :: Maybe Bool,
-    createDueDate :: Maybe UTCTime
+    createDueDate :: Maybe UTCTime,
+    createPriority :: Maybe Priority
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
@@ -83,7 +94,8 @@ getTodosDueSoon threshold = do
 data UpdateTodoPayload = UpdateTodoPayload
   { updateTitle :: Maybe T.Text,
     updateCompleted :: Maybe Bool,
-    updateDueDate :: Maybe UTCTime
+    updateDueDate :: Maybe UTCTime,
+    updatePriority :: Maybe Priority
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
