@@ -23,7 +23,7 @@ import Data.Char (toLower)
 import qualified Data.Text as T
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
 import Database.Persist (Entity (Entity), SelectOpt (..), selectList, (<.), (<=.), (==.))
-import Database.Persist.Sqlite (SqlBackend, fromSqlKey)
+import Database.Persist.Sqlite (SqlBackend, fromSqlKey, (>=.))
 import Database.Persist.TH (mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
 import GHC.Generics (Generic)
 
@@ -78,7 +78,7 @@ getTodosDueSoon :: (MonadIO m) => NominalDiffTime -> ReaderT SqlBackend m [Entit
 getTodosDueSoon threshold = do
   now <- liftIO getCurrentTime
   let soonTime = addUTCTime threshold now
-  selectList [TodoDueDate <=. Just soonTime, TodoCompleted ==. False] []
+  selectList [TodoDueDate >=. Just now, TodoDueDate <=. Just soonTime, TodoCompleted ==. False] []
 
 data UpdateTodoPayload = UpdateTodoPayload
   { updateTitle :: Maybe T.Text,
