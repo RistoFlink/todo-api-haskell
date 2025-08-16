@@ -26,6 +26,7 @@ import Database.Persist (Entity (Entity), SelectOpt (..), selectList, (<.), (<=.
 import Database.Persist.Sqlite (SqlBackend, fromSqlKey, (>=.))
 import Database.Persist.TH (derivePersistField, mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
 import GHC.Generics (Generic)
+import Model (EntityField (TodoPriority), Todo (todoPriority))
 
 data Priority = High | Medium | Low
   deriving (Show, Read, Eq, Ord, Generic)
@@ -53,13 +54,14 @@ Todo
 -- JSON instance for sending data to clients
 instance ToJSON (Entity Todo) where
   toJSON (Entity todoId todo) =
-    object
+    objec
       [ "id" .= fromSqlKey todoId,
         "title" .= todoTitle todo,
         "completed" .= todoCompleted todo,
         "createdAt" .= todoCreatedAt todo,
         "updatedAt" .= todoUpdatedAt todo,
-        "dueDate" .= todoDueDate todo
+        "dueDate" .= todoDueDate todo,
+        "priority" .= todoPriority todo
       ]
 
 -- Payload for receiving data from clients
@@ -130,6 +132,8 @@ toSelectOpt (Just (SortBy field order)) =
     ("updatedat", Descending) -> [Desc TodoUpdatedAt]
     ("duedate", Ascending) -> [Asc TodoDueDate]
     ("duedate", Descending) -> [Desc TodoDueDate]
+    ("priority", Ascending) -> [Asc TodoPriority]
+    ("priority", Descending) -> [Desc TodoPriority]
     _ -> [Desc TodoCreatedAt]
 
 -- Helper to parse sort parameters
