@@ -92,7 +92,8 @@ postTodo payload = do
         Right validDate -> return validDate
 
   now <- liftIO getCurrentTime
-  let newTodo = M.Todo validTitle validCompleted now now validDueDate
+  let priority = fromMaybe M.Medium (M.createPriority payload)
+  let newTodo = M.Todo validTitle validCompleted now now validDueDate priority
   runDb $ insertEntity newTodo
 
 getTodoById :: M.Key M.Todo -> AppM (Entity M.Todo)
@@ -121,6 +122,9 @@ putTodo todoId payload = do
       let updatedCompleted = case maybeCompleted of
             Nothing -> M.todoCompleted originalTodo
             Just c -> c
+      let updatedPriority = case M.updatePriority payload of
+            Nothing -> M.todoPriority originalTodo
+            Just p -> p
 
       -- Validate and handle due date update
       validateDueDate <- case M.updateDueDate payload of
@@ -131,7 +135,7 @@ putTodo todoId payload = do
             Left err -> throwError err400 {errBody = "Invalid due date: " <> fromString err}
             Right validDate -> return validDate
 
-      let updatedTodo = M.Todo updatedTitle updatedCompleted (M.todoCreatedAt originalTodo) now validateDueDate
+      let updatedTodo = M.Todo updatedTitle updatedCompleted (M.todoCreatedAt originalTodo) now validateDueDate updatedPriority
       runDb $ replace todoId updatedTodo
       return $ Entity todoId updatedTodo
 
