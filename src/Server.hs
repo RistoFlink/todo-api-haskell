@@ -15,7 +15,9 @@ import Data.Time (getCurrentTime)
 import Database.Persist (Entity (..), SelectOpt (LimitTo, OffsetBy), count, delete, getEntity, insertEntity, replace, selectList, (==.))
 import qualified Model as M
 import Monad (AppConfig, AppM (..), runDb)
+import Network.Wai (Request)
 import Network.Wai.Handler.Warp (run)
+import Network.Wai.Middleware.Cors
 import Servant
 import Validation (validateCreateTodoPayload, validateUpdateTodoPayload)
 
@@ -44,7 +46,16 @@ server config = hoistServer (Proxy :: Proxy TodoAPI) (appMToHandler config) serv
 runApp :: AppConfig -> IO ()
 runApp config = do
   putStrLn "Starting server on http://localhost:8080"
-  run 8080 (serve (Proxy :: Proxy TodoAPI) (server config))
+  run 8080 $ cors corsPolicy $ serve (Proxy :: Proxy TodoAPI) (server config)
+
+corsPolicy :: Request -> Maybe CorsResourcePolicy
+corsPolicy _ =
+  Just $
+    simpleCorsResourcePolicy
+      { corsRequestHeaders = ["Content-Type"],
+        corsMethods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        corsOrigins = Nothing -- Allow all origins (for development)
+      }
 
 -- Handlers
 healthCheck :: AppM String

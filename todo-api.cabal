@@ -38,7 +38,9 @@ library
                         mtl,
                         monad-logger,
                         time,
-                        bytestring
+                        bytestring,
+                        wai,
+                        wai-cors
 
     -- Directory containing the library's source files.
     hs-source-dirs:   src
@@ -59,6 +61,8 @@ executable todo-api
                 monad-logger,
                 persistent-sqlite,
                 time,
+                wai,
+                wai-cors,
                 warp
  -- Directory containing the executable's source file.
  hs-source-dirs: app
