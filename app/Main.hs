@@ -5,7 +5,7 @@ module Main where
 import Control.Monad.Logger (runStderrLoggingT)
 import Database.Persist.Sqlite (createSqlitePool, runMigration, runSqlPool)
 import Model (migrateAll)
-import Monad (AppConfig(..))
+import Monad (AppConfig (..))
 import Server (runApp)
 
 main :: IO ()
@@ -17,7 +17,7 @@ main = do
   runSqlPool (runMigration migrateAll) pool
 
   -- Create the AppConfig
-  let config = AppConfig { appPool = pool }
+  let config = AppConfig {appPool = pool}
 
   -- Run the app
   runApp config

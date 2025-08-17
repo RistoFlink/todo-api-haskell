@@ -5,6 +5,7 @@ module Api where
 
 import Database.Persist (Entity)
 import Model
+import qualified Model as M
 import Servant
 
 type TodoAPI =
@@ -23,3 +24,4 @@ type TodoAPI =
     :<|> "todos" :> Capture "id" (Key Todo) :> Delete '[JSON] ()
     :<|> "todos" :> "overdue" :> Get '[JSON] [Entity Todo]
     :<|> "todos" :> "due-soon" :> QueryParam "hours" Int :> Get '[JSON] [Entity Todo]
+    :<|> "todos" :> "stats" :> Get '[JSON] M.TodoStats

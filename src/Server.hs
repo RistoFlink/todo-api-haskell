@@ -34,6 +34,7 @@ serverLogic =
     :<|> deleteTodo
     :<|> getOverdueTodos
     :<|> getTodosDueSoon
+    :<|> getTodoStats
 
 -- Combine all handlers into the server
 server :: AppConfig -> Server TodoAPI
@@ -174,3 +175,6 @@ getTodosDueSoon maybeHours = do
   let hours = fromMaybe 24 maybeHours
   let threshold = fromIntegral hours * 60 * 60
   runDb $ M.getTodosDueSoon threshold
+
+getTodoStats :: AppM M.TodoStats
+getTodoStats = runDb M.getAllTodoStats
