@@ -15,6 +15,7 @@ type TodoAPI =
       :> QueryParam "offset" Int
       :> QueryParam "sort" String
       :> QueryParam "search" String
+      :> QueryParam "priority" String
       :> Get '[JSON] TodoResponse
     :<|> "todos" :> ReqBody '[JSON] CreateTodoPayload :> Post '[JSON] (Entity Todo)
     :<|> "todos" :> Capture "id" (Key Todo) :> Get '[JSON] (Entity Todo)

@@ -7,6 +7,7 @@ module Server where
 import Api (TodoAPI)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (runReaderT)
+import Data.Char (toLower)
 import Data.Maybe (fromMaybe)
 import Data.String (fromString)
 import qualified Data.Text as T
@@ -48,12 +49,30 @@ runApp config = do
 healthCheck :: AppM String
 healthCheck = return "OK"
 
-getTodos :: Maybe Bool -> Maybe Int -> Maybe Int -> Maybe String -> Maybe String -> AppM M.TodoResponse
-getTodos maybeCompleted maybeLimit maybeOffset maybeSortParam maybeSearchParam = do
+-- Helper for parsing priority from string
+parsePriorityParam :: Maybe String -> Maybe M.Priority
+parsePriorityParam Nothing = Nothing
+parsePriorityParam (Just s) = case map toLower s of
+  "low" -> Just M.Low
+  "medium" -> Just M.Medium
+  "high" -> Just M.High
+  _ -> Nothing
+
+getTodos :: Maybe Bool -> Maybe Int -> Maybe Int -> Maybe String -> Maybe String -> Maybe String -> AppM M.TodoResponse
+getTodos maybeCompleted maybeLimit maybeOffset maybeSortParam maybeSearchParam maybePriorityParam = do
   let sortBy = M.parseSortParam maybeSortParam
-  let filters = case maybeCompleted of
-        Nothing -> []
-        Just isCompleted -> [M.TodoCompleted ==. isCompleted]
+      priority = parsePriorityParam maybePriorityParam
+
+      -- Build filters based on completed and priority parameters
+      filters =
+        ( case maybeCompleted of
+            Nothing -> []
+            Just isCompleted -> [M.TodoCompleted ==. isCompleted]
+        )
+          ++ ( case priority of
+                 Nothing -> []
+                 Just p -> [M.TodoPriority ==. p]
+             )
 
   -- Set defaults: limit 10, offset 0
   let limit' = maybe 10 (max 1 . min 100) maybeLimit
