@@ -23,7 +23,7 @@ import Data.Aeson.Types (object)
 import Data.Char (toLower)
 import qualified Data.Text as T
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
-import Database.Persist (Entity (Entity), SelectOpt (..), selectList, (<.), (<=.), (==.))
+import Database.Persist (Entity (Entity), SelectOpt (..), count, selectList, (<.), (<=.), (==.))
 import Database.Persist.Sqlite (SqlBackend, fromSqlKey, (>=.))
 import Database.Persist.TH (derivePersistField, mkMigrate, mkPersist, persistLowerCase, share, sqlSettings)
 import GHC.Generics (Generic)
@@ -149,3 +149,61 @@ parseSortParam (Just s) = case break (== ':') s of
   (field, ':' : order) -> SortBy (T.pack field) <$> parseOrder order
   (field, "") -> Just $ SortBy (T.pack field) Ascending
   _ -> Nothing
+
+-- Statistics response types
+data PriorityStats = PriorityStats
+  { high :: Int,
+    medium :: Int,
+    low :: Int,
+    priorityTotal :: Int
+  }
+  deriving (Show, Generic, ToJSON)
+
+data CompletionStats = CompletionStats
+  { completed :: Int,
+    incomplete :: Int,
+    completionTotal :: Int
+  }
+  deriving (Show, Generic, ToJSON)
+
+data TodoStats = TodoStats
+  { priorityStats :: PriorityStats,
+    completionStats :: CompletionStats,
+    overdueCount :: Int,
+    dueSoonCount :: Int
+  }
+  deriving (Show, Generic, ToJSON)
+
+-- Database queries for statistics
+getPriorityStats :: (MonadIO m) => ReaderT SqlBackend m PriorityStats
+getPriorityStats = do
+  highCount <- count [TodoPriority ==. High]
+  mediumCount <- count [TodoPriority ==. Medium]
+  lowCount <- count [TodoPriority ==. Low]
+  let totalCount' = highCount + mediumCount + lowCount
+  return $ PriorityStats highCount mediumCount lowCount totalCount'
+
+getCompletionStats :: (MonadIO m) => ReaderT SqlBackend m CompletionStats
+getCompletionStats = do
+  completedCount <- count [TodoCompleted ==. True]
+  incompleteCount <- count [TodoCompleted ==. False]
+  let totalCount' = completedCount + incompleteCount
+  return $ CompletionStats completedCount incompleteCount totalCount'
+
+getOverdueCount :: (MonadIO m) => ReaderT SqlBackend m Int
+getOverdueCount = do
+  now <- liftIO getCurrentTime
+  count [TodoDueDate <. Just now, TodoCompleted ==. False]
+
+getDueSoonCount :: (MonadIO m) => ReaderT SqlBackend m Int
+getDueSoonCount = do
+  now <- liftIO getCurrentTime
+  let tomorrow = addUTCTime (24 * 60 * 60) now
+  count [TodoDueDate >=. Just now, TodoDueDate <=. Just tomorrow, TodoCompleted ==. False]
+
+getAllTodoStats :: (MonadIO m) => ReaderT SqlBackend m TodoStats
+getAllTodoStats = do
+  priorityStats' <- getPriorityStats
+  completionStats' <- getCompletionStats
+  overdueCount' <- getOverdueCount
+  TodoStats priorityStats' completionStats' overdueCount' <$> getDueSoonCount
