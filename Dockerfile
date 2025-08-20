@@ -53,4 +53,4 @@ USER app
 WORKDIR /app
 
 EXPOSE $PORT
-CMD ["todo-api"]
+CMD ["sh", "-c", "chown app:app /app/data && exec todo-api"]
