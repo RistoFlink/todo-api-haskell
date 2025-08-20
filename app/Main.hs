@@ -11,7 +11,7 @@ import Server (runApp)
 main :: IO ()
 main = do
   -- Create a connection pool
-  pool <- runStderrLoggingT $ createSqlitePool "/data/todos.db" 5
+  pool <- runStderrLoggingT $ createSqlitePool "/app/data/todos.db" 5
 
   -- Run migrations using the pool
   runSqlPool (runMigration migrateAll) pool
