@@ -19,6 +19,8 @@ import Network.Wai (Request)
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.Cors
 import Servant
+import System.Environment (lookupEnv)
+import Text.Read (readMaybe)
 import Validation (validateCreateTodoPayload, validateUpdateTodoPayload)
 
 -- This function converts AppM actions into the Handlers that Servant expects.
@@ -45,8 +47,14 @@ server config = hoistServer (Proxy :: Proxy TodoAPI) (appMToHandler config) serv
 -- Run the application
 runApp :: AppConfig -> IO ()
 runApp config = do
-  putStrLn "Starting server on http://localhost:8080"
-  run 8080 $ cors corsPolicy $ serve (Proxy :: Proxy TodoAPI) (server config)
+  -- Look for the PORT environment variable
+  maybePortStr <- lookupEnv "PORT"
+  -- Use the PORT from the environment, or default to 8080
+  let port = fromMaybe 8080 (maybePortStr >>= readMaybe)
+
+  putStrLn $ "Starting server on port " ++ show port
+
+  run port $ cors corsPolicy $ serve (Proxy :: Proxy TodoAPI) (server config)
 
 corsPolicy :: Request -> Maybe CorsResourcePolicy
 corsPolicy _ =
