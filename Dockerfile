@@ -35,7 +35,7 @@ COPY . .
 RUN /opt/.ghcup/bin/cabal build
 RUN /opt/.ghcup/bin/cabal install --install-method=copy --installdir=/app/bin
 
-# Runtime stage
+# --- Runtime stage ---
 FROM ubuntu:22.04
 
 RUN apt-get update && apt-get install -y \
@@ -49,8 +49,9 @@ RUN useradd -m -s /bin/bash app
 COPY --from=builder /app/bin/* /usr/local/bin/
 
 RUN mkdir -p /app && chown app:app /app
-USER app
+
 WORKDIR /app
 
 EXPOSE $PORT
-CMD ["sh", "-c", "chown app:app /app/data && exec todo-api"]
+
+CMD ["sh", "-c", "chown app:app /app/data && su app -c 'exec todo-api'"]
