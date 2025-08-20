@@ -18,7 +18,7 @@ module Model where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (ReaderT)
-import Data.Aeson (FromJSON, ToJSON (..), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:?), (.=))
 import Data.Aeson.Types (object)
 import Data.Char (toLower)
 import qualified Data.Text as T
@@ -104,7 +104,15 @@ data UpdateTodoPayload = UpdateTodoPayload
     updateDueDate :: Maybe UTCTime,
     updatePriority :: Maybe Priority
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, ToJSON)
+
+instance FromJSON UpdateTodoPayload where
+  parseJSON = withObject "UpdateTodoPayload" $ \o ->
+    UpdateTodoPayload
+      <$> o .:? "createTitle"
+      <*> o .:? "completed"
+      <*> o .:? "dueDate"
+      <*> o .:? "priority"
 
 -- Response type with pagination metadata
 data TodoResponse
