@@ -1,11 +1,11 @@
-cabal-version:      3.8
-name:               todo-api
-version:            0.1.0.0
-license:            NONE
-author:             RistoFlink
-maintainer:         kenssi@gmail.com
-build-type:         Simple
-extra-doc-files:    CHANGELOG.md
+cabal-version: 3.8
+name: todo-api
+version: 0.1.0.0
+license: NONE
+author: RistoFlink
+maintainer: kenssi@gmail.com
+build-type: Simple
+extra-doc-files: CHANGELOG.md
 
 common warnings
     ghc-options: -Wall
@@ -13,58 +13,53 @@ common warnings
 -- NEW: Define the library section for your core logic
 library
     -- Import common warning flags.
-    import:           warnings
-
+    import: warnings
     -- List the modules that your library exposes.
     -- Other parts of your project can import these.
-    exposed-modules:  Monad,
-                        Model,
-                        Api,
-                        Server,
-                        Validation,
-
+    exposed-modules: Monad,
+                     Model,
+                     Api,
+                     Server,
+                     Validation,
     -- Add other modules created in src/ that are not exposed
     -- other-modules:
-
     -- Main list of dependencies for the application logic.
-    build-depends:    base ^>=4.18.3.0,
-                        servant-server,
-                        aeson,
-                        warp,
-                        text,
-                        persistent,
-                        persistent-sqlite,
-                        persistent-template,
-                        mtl,
-                        monad-logger,
-                        time,
-                        bytestring,
-                        wai,
-                        wai-cors
-
+    build-depends: base >= 4.16 && < 5,
+                   servant-server,
+                   aeson,
+                   warp,
+                   text,
+                   persistent,
+                   persistent-sqlite,
+                   persistent-template,
+                   mtl,
+                   monad-logger,
+                   time,
+                   bytestring,
+                   wai,
+                   wai-cors
     -- Directory containing the library's source files.
-    hs-source-dirs:   src
-
+    hs-source-dirs: src
     -- Language standard.
     default-language: Haskell2010
 
 executable todo-api
- -- Import common warning flags.
- import: warnings
- -- The file containing the main function.
- main-is: Main.hs
- -- The executable now depends on your project's own library.
- -- It gets all other dependencies (like servant, persistent)
- -- transitively from the library.
- build-depends: base ^>=4.18.3.0,
-                todo-api,
-                monad-logger,
-                persistent-sqlite,
-                time,
-                wai,
-                wai-cors,
-                warp
- -- Directory containing the executable's source file.
- hs-source-dirs: app
- -- Language standard.
- default-language: Haskell2010
+    -- Import common warning flags.
+    import: warnings
+    -- The file containing the main function.
+    main-is: Main.hs
+    -- The executable now depends on your project's own library.
+    -- It gets all other dependencies (like servant, persistent)
+    -- transitively from the library.
+    build-depends: base >= 4.16 && < 5,
+                   todo-api,
+                   monad-logger,
+                   persistent-sqlite,
+                   time,
+                   wai,
+                   wai-cors,
+                   warp
+    -- Directory containing the executable's source file.
+    hs-source-dirs: app
+    -- Language standard.
+    default-language: Haskell2010
