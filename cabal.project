@@ -1,0 +1,10 @@
+packages: .
+
+-- Optional: specify GHC version if needed
+-- with-compiler: ghc-9.4.8
+
+-- Optional: optimization flags
+optimization: 2
+
+-- Optional: documentation
+documentation: False
