@@ -1,53 +1,56 @@
-FROM alpine:3.18 AS builder
+FROM ubuntu:22.04 AS builder
 
-# Install Haskell and dependencies
-RUN apk add --no-cache \
-    ghc \
-    cabal \
-    musl-dev \
-    zlib-dev \
-    postgresql-dev \
-    sqlite-dev \
-    gmp-dev \
-    libffi-dev
+ENV DEBIAN_FRONTEND=noninteractive
+ENV GHCUP_INSTALL_BASE_PREFIX=/opt
+ENV PATH=/opt/.ghcup/bin:$PATH
+
+# Install dependencies and GHCup
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    libpq-dev \
+    libsqlite3-dev \
+    zlib1g-dev \
+    libgmp-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install GHCup, GHC, and Cabal
+RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh \
+    && /opt/.ghcup/bin/ghcup install ghc 9.6.4 \
+    && /opt/.ghcup/bin/ghcup install cabal latest \
+    && /opt/.ghcup/bin/ghcup set ghc 9.6.4
 
 WORKDIR /app
 
-# Copy cabal files
+# Copy cabal files first
 COPY *.cabal cabal.project ./
 
-# Update cabal and build dependencies
-RUN cabal update
-RUN cabal configure
-RUN cabal build --dependencies-only
+# Update and build dependencies
+RUN /opt/.ghcup/bin/cabal update
+RUN /opt/.ghcup/bin/cabal build --dependencies-only
 
-# Copy source code and build
+# Copy source and build
 COPY . .
-RUN cabal build
-RUN cabal install --install-method=copy --installdir=/app/bin
+RUN /opt/.ghcup/bin/cabal build
+RUN /opt/.ghcup/bin/cabal install --install-method=copy --installdir=/app/bin
 
 # Runtime stage
-FROM alpine:3.18
+FROM ubuntu:22.04
 
-# Install runtime dependencies
-RUN apk add --no-cache \
-    gmp \
-    libffi \
-    postgresql-libs \
-    sqlite
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    libsqlite3-0 \
+    libgmp10 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create user
-RUN adduser -D -s /bin/sh app
+RUN useradd -m -s /bin/bash app
 
-# Copy executable
-COPY --from=builder /app/bin/todo-api /usr/local/bin/todo-api
+COPY --from=builder /app/bin/* /usr/local/bin/
 
-# Create app directory
 RUN mkdir -p /app && chown app:app /app
-
 USER app
 WORKDIR /app
 
 EXPOSE $PORT
-
 CMD ["todo-api"]
